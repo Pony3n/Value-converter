@@ -1,14 +1,20 @@
+import redis
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.decorators import api_view
+from django.conf import settings
 
 from .serializers import ConversionSerializer
 from .services import get_exchange_rate
 
 
 class ConvertCurrency(APIView):
+    """
+
+    """
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('from', openapi.IN_QUERY, description="From currency", type=openapi.TYPE_STRING),
@@ -56,3 +62,13 @@ class ConvertCurrency(APIView):
             except ValueError as e:
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def check_redis(request):
+    try:
+        redis_client = redis.StrictRedis.from_url(settings.CACHES['default']['LOCATION'])
+        redis_client.set('test_key', 'test_value')
+        value = redis_client.get('test_key').decode('utf-8')
+        return Response({'status': 'success', 'value': value})
+    except redis.ConnectionError as error:
+        return Response({'status': 'error', 'message': str(error)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
